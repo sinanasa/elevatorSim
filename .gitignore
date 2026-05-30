@@ -8,3 +8,7 @@ build/
 .mypy_cache/
 .hypothesis/
 *.egg
+docs/TALKING_POINTS.md
+docs/PANEL_PREP.md
+.DS_Store
+.idea/
