@@ -222,12 +222,17 @@ class Elevator:
     assigned_requests: list[PassengerRequest] = field(default_factory=list)
 
     def snapshot(self) -> ElevatorSnapshot:
-        """Produce an immutable view for strategy consumption."""
+        """Produce an immutable view for strategy consumption.
+
+        passenger_count includes both riders and assigned-but-not-yet-picked-up
+        requests, so strategies see the full committed load and avoid
+        overloading a single elevator during batch dispatch.
+        """
         return ElevatorSnapshot(
             elevator_id=self.id,
             current_floor=self.current_floor,
             direction=self.direction,
-            passenger_count=len(self.passengers),
+            passenger_count=len(self.passengers) + len(self.assigned_requests),
             capacity=self.capacity,
             service_policy=self.service_policy,
             destinations=tuple(p.dest for p in self.passengers),
@@ -337,12 +342,19 @@ class Elevator:
         return min(all_targets, key=lambda f: abs(f - self.current_floor))
 
     def _all_target_floors(self) -> set[int]:
-        """All floors this elevator needs to visit: passenger destinations + pickup floors."""
+        """All floors this elevator needs to visit: passenger destinations + pickup floors.
+
+        When at capacity, only target destinations (dropoff floors) — don't
+        travel to pickup floors until capacity is freed by delivering passengers.
+        This prevents full elevators from wasting movement visiting floors
+        where they cannot load anyone.
+        """
         targets: set[int] = set()
         for p in self.passengers:
             targets.add(p.dest)
-        for r in self.assigned_requests:
-            targets.add(r.source)
+        if len(self.passengers) < self.capacity:
+            for r in self.assigned_requests:
+                targets.add(r.source)
         return targets
 
     def _update_direction(self) -> None:

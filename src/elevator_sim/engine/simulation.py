@@ -136,9 +136,13 @@ class SimulationEngine:
         # Determine when the simulation ends: all passengers delivered
         # or a safety bound on max ticks
         max_request_time = max(r.request_time for r in sorted_requests) if sorted_requests else 0
-        # Safety bound: max request time + enough ticks for worst case
-        # (elevator traverses entire building twice per remaining passenger)
-        max_ticks = max_request_time + self.config.num_floors * 4 + len(sorted_requests) * 2
+        # Safety bound: max request time + enough ticks for worst case.
+        # Each batch of passengers (capacity per elevator) requires up to
+        # two full building traversals (up + down). Account for total batches
+        # needed across the fleet.
+        effective_capacity = max(1, self.config.num_elevators * self.config.max_capacity)
+        batches = (len(sorted_requests) + effective_capacity - 1) // effective_capacity
+        max_ticks = max_request_time + batches * self.config.num_floors * 2 + self.config.num_floors * 2
 
         logger.info(
             "simulation.started",
