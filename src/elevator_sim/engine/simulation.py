@@ -88,17 +88,25 @@ class SimulationEngine:
         self,
         service_policies: list[ServicePolicy] | None = None,
     ) -> None:
-        """Create the elevator fleet. Call once before running."""
-        for i in range(self.config.num_elevators):
+        """Create the elevator fleet. Call once before running.
+
+        Elevators are distributed evenly across floors to improve
+        initial response time and give zone-based dispatch meaningful
+        locality from the start.
+        """
+        n = self.config.num_elevators
+        for i in range(n):
             policy = (
                 service_policies[i]
                 if service_policies and i < len(service_policies)
                 else ServicePolicy.full_service(self.config.num_floors)
             )
+            # Distribute starting positions evenly across floors
+            start_floor = 1 + (i * (self.config.num_floors - 1)) // max(1, n - 1) if n > 1 else 1
             elevator = Elevator(
                 id=i,
                 capacity=self.config.max_capacity,
-                current_floor=1,
+                current_floor=start_floor,
                 direction=Direction.IDLE,
                 service_policy=policy,
             )
