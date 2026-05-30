@@ -68,7 +68,7 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     # 2. Efficiency vs Fairness scatter
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    # Collect points first for collision detection
+    # Collect points for plotting and label placement
     points: list[tuple[float, float, str]] = []
     for name in strategy_names:
         stats = PassengerStatistics.from_passengers(comp.results[name].passengers)
@@ -77,16 +77,25 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     for x, y, name in points:
         ax.scatter(x, y, s=100, label=name, zorder=5)
 
-    # Spread labels to avoid overlap
-    offsets = _spread_labels(points)
-    for (x, y, name), (dx, dy) in zip(points, offsets):
+    # Place labels with vertical staggering to avoid overlap
+    placed: list[tuple[float, float]] = []
+    for x, y, name in points:
+        dy = 8
+        for px, py in placed:
+            # Check if this point is close to an already-labeled point
+            # using percentage of data range as threshold
+            x_range = max(p[0] for p in points) - min(p[0] for p in points) or 1
+            y_range = max(p[1] for p in points) - min(p[1] for p in points) or 1
+            if abs(x - px) / x_range < 0.1 and abs(y - py) / y_range < 0.1:
+                dy = -20  # push below the point
+                break
         ax.annotate(
-            name,
-            (x, y),
+            name, (x, y),
             textcoords="offset points",
-            xytext=(dx, dy),
+            xytext=(10, dy),
             fontsize=9,
         )
+        placed.append((x, y))
 
     ax.set_xlabel("Average Total Time (efficiency →)")
     ax.set_ylabel("Max Wait Time (fairness ↓)")
@@ -144,30 +153,3 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     return generated
 
 
-def _spread_labels(
-    points: list[tuple[float, float, str]],
-    min_distance: float = 0.5,
-) -> list[tuple[int, int]]:
-    """Compute label offsets that avoid overlap.
-
-    Returns a list of (dx, dy) offset-point tuples, one per point.
-    Points that are too close get staggered vertically.
-    """
-    offsets: list[tuple[int, int]] = []
-    used_positions: list[tuple[float, float]] = []
-
-    for i, (x, y, _name) in enumerate(points):
-        dx, dy = 10, 5
-        # Check against previously placed labels
-        for px, py in used_positions:
-            if abs(x - px) < min_distance and abs(y - py) < min_distance:
-                # Collision — stagger this label downward
-                dy = dy - 18 * (len([
-                    1 for ux, uy in used_positions
-                    if abs(x - ux) < min_distance and abs(y - uy) < min_distance
-                ]))
-                break
-        offsets.append((dx, dy))
-        used_positions.append((x, y))
-
-    return offsets
