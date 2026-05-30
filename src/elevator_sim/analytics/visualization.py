@@ -68,20 +68,23 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     # 2. Efficiency vs Fairness scatter
     fig, ax = plt.subplots(figsize=(8, 6))
 
+    # Collect points first for collision detection
+    points: list[tuple[float, float, str]] = []
     for name in strategy_names:
         stats = PassengerStatistics.from_passengers(comp.results[name].passengers)
-        ax.scatter(
-            stats.total_times.avg,
-            stats.wait_times.max,
-            s=100,
-            label=name,
-            zorder=5,
-        )
+        points.append((stats.total_times.avg, stats.wait_times.max, name))
+
+    for x, y, name in points:
+        ax.scatter(x, y, s=100, label=name, zorder=5)
+
+    # Spread labels to avoid overlap
+    offsets = _spread_labels(points)
+    for (x, y, name), (dx, dy) in zip(points, offsets):
         ax.annotate(
             name,
-            (stats.total_times.avg, stats.wait_times.max),
+            (x, y),
             textcoords="offset points",
-            xytext=(10, 5),
+            xytext=(dx, dy),
             fontsize=9,
         )
 
@@ -139,3 +142,32 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     generated.append(obs_path)
 
     return generated
+
+
+def _spread_labels(
+    points: list[tuple[float, float, str]],
+    min_distance: float = 0.5,
+) -> list[tuple[int, int]]:
+    """Compute label offsets that avoid overlap.
+
+    Returns a list of (dx, dy) offset-point tuples, one per point.
+    Points that are too close get staggered vertically.
+    """
+    offsets: list[tuple[int, int]] = []
+    used_positions: list[tuple[float, float]] = []
+
+    for i, (x, y, _name) in enumerate(points):
+        dx, dy = 10, 5
+        # Check against previously placed labels
+        for px, py in used_positions:
+            if abs(x - px) < min_distance and abs(y - py) < min_distance:
+                # Collision — stagger this label downward
+                dy = dy - 18 * (len([
+                    1 for ux, uy in used_positions
+                    if abs(x - ux) < min_distance and abs(y - uy) < min_distance
+                ]))
+                break
+        offsets.append((dx, dy))
+        used_positions.append((x, y))
+
+    return offsets
