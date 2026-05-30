@@ -31,15 +31,15 @@ python -m venv .venv && source .venv/bin/activate
 pip install --upgrade pip
 pip install -e ".[dev]"
 
-# Run with sample data (51-floor building)
-elevator-sim run tests/fixtures/sample_requests.csv --floors 51
+# Run with sample data
+elevator-sim run tests/fixtures/sample_requests.csv
 
 # Compare all strategies
-elevator-sim compare tests/fixtures/sample_requests.csv --floors 51
+elevator-sim compare tests/fixtures/sample_requests.csv
 
 # Generate charts (requires matplotlib)
 pip install -e ".[viz]"
-elevator-sim visualize tests/fixtures/sample_requests.csv --floors 51
+elevator-sim visualize tests/fixtures/sample_requests.csv
 ```
 
 ### Docker

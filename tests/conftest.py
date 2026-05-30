@@ -38,7 +38,7 @@ def config_small() -> SimulationConfig:
 @pytest.fixture
 def config_medium() -> SimulationConfig:
     """Medium simulation config matching the sample CSV."""
-    return SimulationConfig(num_floors=51, num_elevators=6, max_capacity=10)
+    return SimulationConfig(num_floors=50, num_elevators=6, max_capacity=10)
 
 
 @pytest.fixture

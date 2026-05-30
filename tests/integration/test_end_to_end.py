@@ -157,10 +157,10 @@ class TestEndToEnd:
             import pytest
             pytest.skip("Sample fixture not found")
 
-        requests = parse_csv(fixture, num_floors=51)
+        requests = parse_csv(fixture, num_floors=50)
         assert len(requests) == 10
 
-        config = SimulationConfig(num_floors=51, num_elevators=6, max_capacity=10)
+        config = SimulationConfig(num_floors=50, num_elevators=6, max_capacity=10)
         engine = SimulationEngine(config=config, strategy=get_strategy("nearest_car"))
         engine.initialize()
         result = engine.run(requests)
