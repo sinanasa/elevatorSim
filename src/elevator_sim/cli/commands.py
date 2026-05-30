@@ -202,7 +202,13 @@ def visualize(
     comp = run_comparison(requests, config)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    generate_comparison_charts(comp, output_dir)
+    try:
+        generate_comparison_charts(comp, output_dir)
+    except ImportError:
+        raise click.ClickException(
+            "matplotlib is required for visualization. "
+            "Install it with: pip install elevator-sim[viz]"
+        )
     click.echo(f"Charts saved to {output_dir}/")
 
 
