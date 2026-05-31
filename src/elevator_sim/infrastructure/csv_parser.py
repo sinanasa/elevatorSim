@@ -68,7 +68,7 @@ def parse_csv(path: Path, num_floors: int | None = None) -> list[PassengerReques
     errors: list[str] = []
     seen_ids: set[str] = set()
 
-    with open(path, newline="") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
 
         for line_num, row in enumerate(reader, start=2):  # +2 for header + 1-indexed
