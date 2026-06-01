@@ -23,59 +23,71 @@ pytest -v --tb=short
 cat tests/fixtures/sample_requests.csv
 ```
 
-Walk through the format: "10 passengers across 50 floors, arriving at
-different times. This is the scenario we'll trace through."
+"10 passengers across 50 floors, arriving at different times.
+This is the simple scenario — I'll also show you 500 passengers
+for the strategy comparison."
 
-### 1.2 — Single Strategy Run (3 min)
+### 1.2 — Single Strategy Run (2 min)
 
 ```bash
-elevator-sim run tests/fixtures/sample_requests.csv \
-  --elevators 6 --floors 51 --capacity 10 \
-  --strategy nearest_car
+elevator-sim run tests/fixtures/sample_requests.csv
 ```
 
 Point out:
 - Statistics output: wait times, travel times, total times
 - Min/max/avg/median/P95/StdDev — "these are the metrics an operations
   team would monitor"
-- Position log generated (show first 10 lines of output file)
+- Observations section: "The system flags that 60% had zero wait time
+  and that wait disparity is 3.5x — it generates actionable insights,
+  not just raw numbers."
 
 ### 1.3 — Strategy Comparison (4 min)
 
+**Use the 500-request stress test — this is where strategies diverge.**
+
 ```bash
-elevator-sim compare tests/fixtures/sample_requests.csv \
-  --elevators 6 --floors 51 --capacity 10
+elevator-sim compare tests/fixtures/stress_500.csv
 ```
 
 This is the key demo moment. Walk through the comparison table:
-- "Nearest-car optimizes for efficiency — lowest average total time"
-- "Round-robin distributes evenly — look at the max wait difference"
-- "Zone-based partitions the building — good for express configurations"
-- "The system tells us which is most efficient and which is most fair.
-  In a real building, that's the trade-off the operations team negotiates."
+- "NearestCar: lowest average total time (67.5) — optimizes for efficiency.
+  But highest max wait (306) — it creates outliers."
+- "RoundRobin: highest average (94.9) — slower overall. But lowest max
+  wait (271) — fairer to worst-case passengers."
+- "ZoneBased: sits between the two (83.8 avg, 290 max wait) — the compromise."
+- "No strategy dominates both axes. The system surfaces this trade-off.
+  In a real building, the operations team picks their point on this curve."
+
+If asked about the 10-request sample: "With 10 requests and 6 distributed
+elevators, NearestCar and ZoneBased converge — not enough contention to
+force different decisions. Under load, they diverge clearly."
 
 ### 1.4 — Visualization (2 min)
 
 ```bash
-elevator-sim visualize tests/fixtures/sample_requests.csv --output-dir demo_output
-open demo_output/time_distributions.png
+elevator-sim visualize tests/fixtures/stress_500.csv --output-dir demo_output
 open demo_output/efficiency_vs_fairness.png
+open demo_output/time_distributions.png
 ```
 
 Show the charts:
-- Box plots showing distribution shape, not just averages
-- Scatter plot: "This is the efficient frontier — you pick your
-  point on this curve"
+- Scatter plot first: "This is the efficiency-fairness frontier. NearestCar
+  top-left: fast average, high worst-case. RoundRobin bottom-right: slower
+  average, better worst-case. You pick your point on this curve."
+- Box plots: "Distribution shapes, not just averages. Look at the outliers
+  on NearestCar's wait time — that's the fairness cost of proximity
+  optimization."
 
 ### 1.5 — Configuration via Environment (1 min)
 
 ```bash
-ELEVATOR_SIM_STRATEGY=round_robin ELEVATOR_SIM_LOG_FORMAT=console \
-  elevator-sim run tests/fixtures/sample_requests.csv --floors 51
+ELEVATOR_SIM_STRATEGY=round_robin elevator-sim run tests/fixtures/sample_requests.csv
 ```
 
-"Configuration flows through Pydantic Settings: env vars, CLI flags,
-defaults. Typed and validated at startup."
+"Configuration flows through Pydantic Settings: env vars with the
+ELEVATOR_SIM_ prefix, CLI flags, then defaults. Typed and validated
+at startup. If I set ELEVATOR_SIM_STRATEGY=invalid, it fails immediately
+with the list of valid options."
 
 ### 1.6 — Docker (1 min)
 
@@ -103,6 +115,16 @@ Highlight while tests run:
   expected values documented in the test docstring. I can walk you through
   that trace."
 
+### 1.8 — Stress Test (1 min, if time permits)
+
+```bash
+elevator-sim compare tests/fixtures/stress_3000.csv
+```
+
+"3,000 passengers, all delivered across all strategies. Average wait is
+520-556 ticks — passengers waiting 17x longer than they travel. That's
+the saturation signal: the answer is more elevators, not a better algorithm."
+
 ---
 
 ## Part 2: Architecture Walkthrough (~15 minutes)
@@ -114,7 +136,9 @@ tree src/elevator_sim -I __pycache__
 ```
 
 "Hexagonal architecture. Domain is pure — no imports from infrastructure,
-no I/O. Engine orchestrates. Infrastructure adapts. CLI delivers."
+no I/O. Engine orchestrates. Infrastructure adapts. CLI delivers.
+Arrows point inward. If I add a REST API, it's a new adapter alongside
+CLI — domain doesn't change."
 
 ### 2.2 — Domain Model (4 min)
 
@@ -206,17 +230,28 @@ and strategies still apply, but the engine would need to become event-driven
 rather than tick-driven."
 
 **Q: How did you use AI?**
-"Claude Code as an accelerator. Every architectural decision — hexagonal
-layout, pattern selection, pattern rejection, testing strategy — was
-authored by me. The AI generated implementation code that I reviewed,
-modified, and can defend line by line. The ADRs and PANEL_PREP were
-written to ensure I own every choice."
+"AI as an accelerator. Every architectural decision — hexagonal layout,
+pattern selection, pattern rejection, testing strategy — was authored
+by me. The AI generated implementation code that I reviewed, modified,
+and can defend line by line. I can defend every choice because I made
+every choice."
 
 **Q: What would you do with another week?**
-"Door dwell time modeling. Look-ahead dispatch (peek at next N requests
-to pre-position). Load-dependent travel time. A/B comparison dashboard.
-And the big one: dynamic strategy switching — use round-robin during
-low load, nearest-car during peak, zone-based for express hours."
+"Three things in priority order. Dynamic strategy switching — detect the
+traffic pattern and switch at runtime. RoundRobin during low load,
+NearestCar during peak, ZoneBased for express hours. The Protocol is
+already pluggable, so it's a one-line swap in the engine. Second,
+look-ahead dispatch — pre-position idle elevators based on historical
+patterns. Third, dwell time — add a DWELLING state to the FSM for
+realistic door-open delays. One enum value, no architectural change."
+
+**Q: NearestCar and ZoneBased produce the same results on the small sample?**
+"Correct. With 6 elevators distributed across 50 floors and only 10
+requests, there's not enough contention to force different decisions.
+The zone filter either matches the same elevator NearestCar would pick
+by proximity, or finds no zone-local elevator and falls back to NearestCar.
+Under 500 requests they diverge clearly — different ticks, different
+averages, different max waits. That's expected and correct behavior."
 
 ---
 
