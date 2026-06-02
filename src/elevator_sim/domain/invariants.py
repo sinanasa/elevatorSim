@@ -23,8 +23,10 @@ from __future__ import annotations
 
 from elevator_sim.domain.model import (
     CapacityViolationError,
+    DoubleAssignmentError,
     Elevator,
     InvalidRequestError,
+    LivenessViolationError,
     Passenger,
     PassengerRequest,
     PassengerStatus,
@@ -77,7 +79,7 @@ def no_double_assignment(passengers: list[Passenger]) -> bool:
             if p.passenger_id in assigned:
                 prev_elevator = assigned[p.passenger_id]
                 if prev_elevator != p.assigned_elevator_id:
-                    raise AssertionError(
+                    raise DoubleAssignmentError(
                         f"Passenger {p.passenger_id} assigned to elevators "
                         f"{prev_elevator} and {p.assigned_elevator_id}"
                     )
@@ -129,7 +131,7 @@ def all_passengers_delivered(passengers: list[Passenger]) -> bool:
             f"{p.passenger_id} (status={p.status.name})" for p in undelivered[:5]
         )
         suffix = f" and {len(undelivered) - 5} more" if len(undelivered) > 5 else ""
-        raise AssertionError(
+        raise LivenessViolationError(
             f"Liveness violation: {len(undelivered)} passengers not delivered: "
             f"{details}{suffix}"
         )

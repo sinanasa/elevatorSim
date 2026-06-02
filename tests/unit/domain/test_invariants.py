@@ -191,14 +191,17 @@ class TestFairness:
     @given(requests=passenger_requests(num_floors=10, max_time=30, max_requests=10))
     @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow])
     def test_fairness_nearest_car(self, requests: list[PassengerRequest]) -> None:
-        """Bounded wait disparity under nearest_car with sub-capacity load."""
+        """Bounded wait disparity under nearest_car with sub-capacity load.
+
+        Uses a generous 10x threshold to catch only pathological cases.
+        Fairness is a soft property — minor disparity under randomized
+        inputs is expected, extreme disparity indicates a strategy bug.
+        """
         engine = run_simulation(requests, 10, 3, 5, "nearest_car")
         delivered = [p for p in engine.passengers.values() if p.status == PassengerStatus.DELIVERED]
         if len(delivered) >= 3:
             passed, msg = bounded_wait_disparity(delivered, max_multiplier=10.0)
-            # Soft check — log but don't fail on minor disparity
-            # Only fail on extreme pathological cases
-            assert passed or True, msg  # Record observation without failing
+            assert passed, f"Fairness violation under nearest_car: {msg}"
 
 
 # ---------------------------------------------------------------------------

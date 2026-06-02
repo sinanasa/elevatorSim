@@ -442,3 +442,11 @@ class InvalidRequestError(SimulationError):
 
 class ServicePolicyViolationError(SimulationError):
     """Raised when an elevator is directed to a floor outside its service policy."""
+
+
+class DoubleAssignmentError(SimulationError):
+    """Raised when a passenger is assigned to two different elevators."""
+
+
+class LivenessViolationError(SimulationError):
+    """Raised when not all passengers are delivered after simulation completes."""
