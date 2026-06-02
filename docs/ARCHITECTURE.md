@@ -246,11 +246,13 @@ Custom exception hierarchy rooted in `SimulationError`:
 
 ```
 SimulationError
-  ├── InvalidStateTransition   (passenger lifecycle violation)
-  ├── CapacityViolationError   (elevator overloaded)
-  ├── DispatchError            (strategy cannot assign)
-  ├── InvalidRequestError      (bad input data)
-  └── ServicePolicyViolationError  (floor not served)
+  ├── InvalidStateTransition      (passenger lifecycle violation)
+  ├── CapacityViolationError      (elevator overloaded)
+  ├── DoubleAssignmentError       (passenger assigned to two elevators)
+  ├── LivenessViolationError      (not all passengers delivered)
+  ├── DispatchError               (strategy cannot assign)
+  ├── InvalidRequestError         (bad input data)
+  └── ServicePolicyViolationError (floor not served)
 ```
 
 Exceptions are raised at domain boundaries. The engine catches
