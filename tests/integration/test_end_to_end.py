@@ -57,7 +57,7 @@ structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(50),
 )
 
-from elevator_sim.domain.model import PassengerStatus, SimulationConfig
+from elevator_sim.domain.model import PassengerStatus, ServicePolicy, SimulationConfig
 from elevator_sim.domain.strategies import get_strategy
 from elevator_sim.engine.simulation import SimulationEngine
 from elevator_sim.infrastructure.csv_parser import parse_csv
@@ -167,3 +167,49 @@ class TestEndToEnd:
 
         assert all(p.status == PassengerStatus.DELIVERED for p in result.passengers)
         assert len(result.passengers) == 10
+
+    def test_express_elevator_routing(self, tmp_path: Path) -> None:
+        """Verify passengers are routed only to elevators that serve their floors.
+
+        Setup: 4 elevators, 50 floors
+          E0, E1: full-service (all floors)
+          E2, E3: express (floor 1 + floors 30-50)
+
+        Passengers requesting mid-floors (e.g., 10->20) must NOT be assigned
+        to express elevators — those floors aren't in the express policy.
+        Passengers requesting high floors (e.g., 1->40) CAN go to express.
+        """
+        csv_content = (
+            "time,id,source,dest\n"
+            "0,p_low,5,15\n"      # mid-floor: only E0/E1 eligible
+            "0,p_high,1,40\n"     # high-floor: all 4 eligible
+            "0,p_mid,10,20\n"     # mid-floor: only E0/E1 eligible
+            "0,p_express,35,45\n" # express-only floors: all 4 eligible
+            "5,p_cross,1,50\n"    # lobby to top: all 4 eligible
+        )
+        input_file = tmp_path / "express_test.csv"
+        input_file.write_text(csv_content)
+
+        requests = parse_csv(input_file, num_floors=50)
+
+        full_service = ServicePolicy.full_service(50)
+        express = ServicePolicy(
+            served_floors=frozenset({1} | set(range(30, 51))),
+            name="express-high",
+        )
+        policies = [full_service, full_service, express, express]
+
+        config = SimulationConfig(num_floors=50, num_elevators=4, max_capacity=10)
+        engine = SimulationEngine(config=config, strategy=get_strategy("nearest_car"))
+        engine.initialize(service_policies=policies)
+        result = engine.run(requests)
+
+        # All passengers delivered
+        assert all(p.status == PassengerStatus.DELIVERED for p in result.passengers)
+
+        # Mid-floor passengers must be on full-service elevators (E0 or E1)
+        passengers = {p.passenger_id: p for p in result.passengers}
+        assert passengers["p_low"].assigned_elevator_id in (0, 1), \
+            f"p_low assigned to express elevator {passengers['p_low'].assigned_elevator_id}"
+        assert passengers["p_mid"].assigned_elevator_id in (0, 1), \
+            f"p_mid assigned to express elevator {passengers['p_mid'].assigned_elevator_id}"
