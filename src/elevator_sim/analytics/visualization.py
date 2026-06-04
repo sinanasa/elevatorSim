@@ -72,7 +72,7 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
     points: list[tuple[float, float, str]] = []
     for name in strategy_names:
         stats = PassengerStatistics.from_passengers(comp.results[name].passengers)
-        points.append((stats.total_times.avg, stats.wait_times.max, name))
+        points.append((stats.total_times.avg, stats.wait_times.max_value, name))
 
     for x, y, name in points:
         ax.scatter(x, y, s=100, label=name, zorder=5)
@@ -116,7 +116,7 @@ def generate_comparison_charts(comp: ComparisonResult, output_dir: Path) -> list
         for n in strategy_names
     ]
     max_waits = [
-        PassengerStatistics.from_passengers(comp.results[n].passengers).wait_times.max
+        PassengerStatistics.from_passengers(comp.results[n].passengers).wait_times.max_value
         for n in strategy_names
     ]
 

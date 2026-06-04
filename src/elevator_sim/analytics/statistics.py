@@ -15,8 +15,8 @@ from elevator_sim.domain.model import Passenger, PassengerStatus
 class TimeStats:
     """Descriptive statistics for a set of time measurements."""
 
-    min: int
-    max: int
+    min_value: int
+    max_value: int
     avg: float
     median: float
     p95: int
@@ -26,7 +26,7 @@ class TimeStats:
     @classmethod
     def from_values(cls, values: list[int]) -> TimeStats:
         if not values:
-            return cls(min=0, max=0, avg=0.0, median=0.0, p95=0, std_dev=0.0, count=0)
+            return cls(min_value=0, max_value=0, avg=0.0, median=0.0, p95=0, std_dev=0.0, count=0)
 
         sorted_v = sorted(values)
         n = len(sorted_v)
@@ -40,8 +40,8 @@ class TimeStats:
         std_dev = (sum((v - avg) ** 2 for v in sorted_v) / n) ** 0.5
 
         return cls(
-            min=sorted_v[0],
-            max=sorted_v[-1],
+            min_value=sorted_v[0],
+            max_value=sorted_v[-1],
             avg=avg,
             median=median,
             p95=sorted_v[p95_idx],

@@ -55,7 +55,7 @@ def analyze_comparison(comp: ComparisonResult) -> ComparisonAnalysis:
     # Rank by fairness (lowest max wait time = rank 1)
     by_fairness = sorted(
         stats_by_name.keys(),
-        key=lambda n: stats_by_name[n][0].wait_times.max,
+        key=lambda n: stats_by_name[n][0].wait_times.max_value,
     )
 
     efficiency_ranks = {name: i + 1 for i, name in enumerate(by_efficiency)}
@@ -111,10 +111,10 @@ def _generate_observations(
             )
 
     # Fairness spread
-    if best_fair.stats.wait_times.max != worst_fair.stats.wait_times.max:
+    if best_fair.stats.wait_times.max_value != worst_fair.stats.wait_times.max_value:
         observations.append(
-            f"Fairness gap: max wait is {best_fair.stats.wait_times.max} ticks "
-            f"under {best_fair.strategy_name} vs {worst_fair.stats.wait_times.max} "
+            f"Fairness gap: max wait is {best_fair.stats.wait_times.max_value} ticks "
+            f"under {best_fair.strategy_name} vs {worst_fair.stats.wait_times.max_value} "
             f"under {worst_fair.strategy_name}."
         )
 
