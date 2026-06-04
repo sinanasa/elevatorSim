@@ -21,15 +21,6 @@ def full_service_policy() -> ServicePolicy:
 
 
 @pytest.fixture
-def express_high_policy() -> ServicePolicy:
-    """Express policy: ground floor + floors 30-50."""
-    return ServicePolicy(
-        served_floors=frozenset({1} | set(range(30, 51))),
-        name="express-high",
-    )
-
-
-@pytest.fixture
 def config_small() -> SimulationConfig:
     """Small simulation config for fast tests."""
     return SimulationConfig(num_floors=10, num_elevators=2, max_capacity=5)
@@ -57,7 +48,7 @@ def idle_elevator(full_service_policy: ServicePolicy) -> Elevator:
 def sample_requests() -> list[PassengerRequest]:
     """The sample requests from the brief."""
     return [
-        PassengerRequest(0, "passenger1", 1, 51),
+        PassengerRequest(0, "passenger1", 1, 50),
         PassengerRequest(0, "passenger2", 1, 37),
         PassengerRequest(10, "passenger3", 20, 1),
     ]
